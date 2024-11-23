@@ -1,16 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AndroidLabs</string>
-    <string name="hello_text">J\'adore Android</string>
-    <string name="edit_text">J\'adore Android</string>
-    <string name="switch_text">Allumer/éteindre</string>
-    <string name="button_text">APPUYEZ-MOI</string>
-    <string name="flag_desc">Français</string>
-    <string name="checkbox_text">Vérifie ceci!</string>
-    <string name="toast_message">L\'étiquette a été mise à jour.</string>
-    <string name="checkbox_state_message">L\'étiquette est maintenant %1$s</string>
-    <string name="state_on">activée</string>
-    <string name="state_off">désactivée</string>
-    <string name="undo_action">Annuler</string>
+    <string name="name_text">Entrez votre nom</string>
+    <string name="welcome_text">Bienvenue %s!</string>
+    <string name="next_button">Suivante</string>
+    <string name="dont_button">Ne m\'appelle pas comme ça</string>
+    <string name="thankyou_button">Merci</string>
 </resources>
 

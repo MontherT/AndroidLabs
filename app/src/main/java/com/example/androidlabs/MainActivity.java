@@ -1,56 +1,59 @@
 package com.example.androidlabs;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.CheckBox;
-import android.widget.TextView;
-import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
-import com.google.android.material.snackbar.Snackbar;
 
 public class MainActivity extends AppCompatActivity {
-    private boolean previousState;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main_linear);
+        setContentView(R.layout.activity_main);
+        EditText userName = findViewById(R.id.edittext);
 
-        TextView initialText = findViewById(R.id.textview);
-        EditText editedText = findViewById(R.id.edittext);
-        Button btn = findViewById(R.id.button);
-        CheckBox checkBox = findViewById(R.id.checkbox);
+        // Load name from SharedPreferences
+        SharedPreferences prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        String savedName = prefs.getString("savedName", null);
+        if (savedName != null) {
+            userName.setText(savedName);
+        }
 
+        Button btnNext = findViewById(R.id.button);
+        btnNext.setOnClickListener(v -> {
+            String name = userName.getText().toString();
 
-        String message = getString(R.string.hello_text);
-        previousState = checkBox.isChecked();
-        editedText.setText(message);
-
-        // Set the OnClickListener for button
-        btn.setOnClickListener(v -> {
-            String textFromEdit = editedText.getText().toString();
-
-            initialText.setText(textFromEdit);
-
-            String toastMessage = getString(R.string.toast_message);
-            Toast.makeText(MainActivity.this, toastMessage, Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(MainActivity.this, NameActivity.class);
+            intent.putExtra("name", name);
+            startActivityForResult(intent, 1);
         });
+    }
 
-        checkBox.setOnCheckedChangeListener((compoundButton, isChecked) -> {
-            final boolean stateBeforeChange = previousState;
+    @Override
+    protected void onPause() {
+        super.onPause();
+        EditText etName = findViewById(R.id.edittext);
+        String name = etName.getText().toString();
 
-            // Localization of State message.
-            String checkState = isChecked ? getString(R.string.state_on) : getString(R.string.state_off);
-            String stateMessage = getString(R.string.checkbox_state_message, checkState);
+        // Save name to SharedPreferences
+        SharedPreferences prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("savedName", name);
+        editor.apply();
+    }
 
-            Snackbar snackbar = Snackbar.make(findViewById(android.R.id.content), stateMessage, Snackbar.LENGTH_LONG);
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
 
-            // Set the action for "Undo"
-            snackbar.setAction(getString(R.string.undo_action), view -> checkBox.setChecked(stateBeforeChange));
-
-            snackbar.show();
-            previousState = isChecked;
-        });
+        // Check if user pressed Thank You
+        if (requestCode == 1) {
+            if (resultCode == 1) {
+                finish(); // Close MainActivity and the app
+            }
+        }
     }
 }
