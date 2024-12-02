@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AndroidLabs</string>
-    <string name="name_text">Entrez votre nom</string>
-    <string name="welcome_text">Bienvenue %s!</string>
-    <string name="next_button">Suivante</string>
-    <string name="dont_button">Ne m\'appelle pas comme ça</string>
-    <string name="thankyou_button">Merci</string>
+    <string name="hint_type_here">Tapez ici</string>
+    <string name="urgent">Urgent</string>
+    <string name="add">Ajouter</string>
+    <string name="enter_task">Veuillez entrer une tâche!</string>
+    <string name="dialog_title">Voulez-vous supprimer ceci?</string>
+    <string name="dialog_message">La ligne sélectionnée est:</string>
+    <string name="yes">Oui</string>
+    <string name="no">Non</string>
 </resources>
 
