@@ -1,150 +1,110 @@
 package com.example.androidlabs;
 
-import android.content.ContentValues;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.AdapterView;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.Switch;
-import android.widget.Toast;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.lang.ref.WeakReference;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class MainActivity extends AppCompatActivity {
 
-    private List<ToDoItem> toDoList = new ArrayList<>();
-    private ToDoAdapter adapter;
-    private ToDoDatabaseHelper dbHelper;
+    private ImageView imageView;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize Database Helper
-        dbHelper = new ToDoDatabaseHelper(this);
+        // Initialize UI components
+        imageView = findViewById(R.id.imageView);
+        progressBar = findViewById(R.id.progressBar);
 
-        // Initialize Adapter before setting it on the ListView
-        adapter = new ToDoAdapter(this, toDoList);
+        // Start the AsyncTask to download cat images
+        CatImages catImages = new CatImages(this);
+        catImages.execute();
+    }
 
-        // Initialize Views
-        ListView listView = findViewById(R.id.todo_list);
-        EditText todoInput = findViewById(R.id.todo_input);
-        Switch urgentSwitch = findViewById(R.id.urgent_switch);
-        Button addButton = findViewById(R.id.add_button);
+    private static class CatImages extends AsyncTask<Void, Integer, Void> {
+        private final WeakReference<MainActivity> activityReference;
+        private Bitmap bitmap;
 
-        // Set the adapter to the ListView
-        listView.setAdapter(adapter);
+        public CatImages(MainActivity activity) {
+            activityReference = new WeakReference<>(activity);
+        }
 
-        // Load tasks from database
-        loadToDos();
+        @Override
+        protected Void doInBackground(Void... voids) {
+            while (!isCancelled()) {
+                try {
+                    // Fetch the random cat image data from the API
+                    URL apiUrl = new URL("https://cataas.com/cat?json=true");
+                    HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
+                    InputStream inputStream = connection.getInputStream();
 
-        // Add Button Logic
-        addButton.setOnClickListener(v -> {
-            String text = todoInput.getText().toString().trim();
-            boolean isUrgent = urgentSwitch.isChecked();
+                    String jsonResponse = new java.util.Scanner(inputStream).useDelimiter("\\A").next();
+                    Log.d("CatImages", "JSON Response: " + jsonResponse);
+                    JSONObject jsonObject = new JSONObject(jsonResponse);
 
-            if (!text.isEmpty()) {
-                // Save to database
-                SQLiteDatabase db = dbHelper.getWritableDatabase();
-                ContentValues values = new ContentValues();
-                values.put(ToDoDatabaseHelper.COLUMN_TEXT, text);
-                values.put(ToDoDatabaseHelper.COLUMN_URGENT, isUrgent ? 1 : 0);
-                long newRowId = db.insert(ToDoDatabaseHelper.TABLE_NAME, null, values);
+                    // Check if URL field exists
+                    String imageUrl = null;
+                    if (jsonObject.has("url")) {
+                        imageUrl = "https://cataas.com" + jsonObject.getString("url");
+                    } else if (jsonObject.has("_id")) {
+                        String imageId = jsonObject.getString("_id");
+                        imageUrl = "https://cataas.com/cat/" + imageId;
+                    }
 
-                // Debugging: Check if the insert was successful
-                if (newRowId != -1) {
-                    Log.d("DatabaseDebug", "Task inserted with ID: " + newRowId);
-                } else {
-                    Log.d("DatabaseDebug", "Failed to insert task.");
+                    if (imageUrl != null) {
+                        // Download the image
+                        InputStream imageStream = new URL(imageUrl).openStream();
+                        bitmap = BitmapFactory.decodeStream(imageStream);
+
+                        // Save the image locally
+                        File file = new File(activityReference.get().getFilesDir(), jsonObject.getString("_id") + ".jpg");
+                        try (FileOutputStream out = new FileOutputStream(file)) {
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                        }
+                    } else {
+                        Log.e("CatImages", "No valid URL found in the response.");
+                    }
+
+                    // Simulate progress bar delay
+                    for (int i = 0; i < 100; i++) {
+                        publishProgress(i);
+                        Thread.sleep(30);
+                    }
+
+                } catch (Exception e) {
+                    Log.e("CatImages", "Error during image processing", e);
                 }
-
-                // Add to list and refresh ListView
-                toDoList.add(new ToDoItem(text, isUrgent));
-                adapter.notifyDataSetChanged();
-                todoInput.setText("");
-            } else {
-                Toast.makeText(this, getString(R.string.enter_task), Toast.LENGTH_SHORT).show();
             }
-        });
-
-        // Press and hold to Delete Item
-        listView.setOnItemLongClickListener((parent, view, position, id) -> {
-            new AlertDialog.Builder(this)
-                    .setTitle(getString(R.string.dialog_title))
-                    .setMessage(getString(R.string.dialog_message) + " " + position)
-                    .setPositiveButton(getString(R.string.yes), (dialog, which) -> {
-                        // Delete from database
-                        SQLiteDatabase db = dbHelper.getWritableDatabase();
-                        String whereClause = ToDoDatabaseHelper.COLUMN_TEXT + " = ?";
-                        String[] whereArgs = {toDoList.get(position).getText()};
-                        db.delete(ToDoDatabaseHelper.TABLE_NAME, whereClause, whereArgs);
-
-                        // Remove from list and refresh
-                        toDoList.remove(position);
-                        adapter.notifyDataSetChanged();
-                    })
-                    .setNegativeButton(getString(R.string.no), null)
-                    .show();
-            return true;
-        });
-    }
-
-    private void loadToDos() {
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.query(ToDoDatabaseHelper.TABLE_NAME, null, null, null, null, null, null);
-
-        Log.d("DatabaseDebug", "Cursor Count: " + cursor.getCount());
-
-        toDoList.clear();
-
-        // Loop through cursor and add tasks to the list
-        while (cursor.moveToNext()) {
-            String text = cursor.getString(cursor.getColumnIndexOrThrow(ToDoDatabaseHelper.COLUMN_TEXT));
-            boolean isUrgent = cursor.getInt(cursor.getColumnIndexOrThrow(ToDoDatabaseHelper.COLUMN_URGENT)) == 1;
-
-            Log.d("DatabaseDebug", "Row: " + text + ", Urgent: " + isUrgent);
-
-            toDoList.add(new ToDoItem(text, isUrgent));
+            return null;
         }
 
-        cursor.close();
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            MainActivity activity = activityReference.get();
+            if (activity != null && !activity.isFinishing()) {
+                activity.progressBar.setProgress(values[0]);
 
-        Log.d("DatabaseDebug", "Tasks loaded: " + toDoList.size());
-
-        // Notify the adapter to refresh the ListView
-        adapter.notifyDataSetChanged();
-    }
-
-
-    private void printCursor(Cursor c) {
-        Log.d("DatabaseDebug", "Database Version: " + dbHelper.getReadableDatabase().getVersion());
-        Log.d("DatabaseDebug", "Number of Columns: " + c.getColumnCount());
-        Log.d("DatabaseDebug", "Column Names: " + Arrays.toString(c.getColumnNames()));
-        Log.d("DatabaseDebug", "Number of Rows: " + c.getCount());
-
-        while (c.moveToNext()) {
-            String row = "Row " + c.getPosition() + ": ";
-            for (int i = 0; i < c.getColumnCount(); i++) {
-                row += c.getColumnName(i) + " = " + c.getString(i) + ", ";
+                if (values[0] == 0) {
+                    activity.imageView.setImageBitmap(bitmap);
+                }
             }
-            Log.d("DatabaseDebug", row);
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        dbHelper.close(); // Close database connection
-        super.onDestroy();
     }
 }
-
