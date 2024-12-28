@@ -7,7 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    tools:context=".MainActivity">
+    tools:context=".DadJokeActivity">
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
@@ -18,14 +18,15 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
+            app:title="Dad Joke"
             app:titleTextColor="@android:color/white" />
 
         <TextView
             android:id="@+id/dad_joke_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Want to read a dad joke?"
-            android:textSize="25sp"
+            android:text="Why don’t skeletons fight each other? They don’t have the guts!"
+            android:textSize="18sp"
             android:layout_gravity="center"
             android:textColor="@android:color/black" />
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
